@@ -19,9 +19,11 @@ package org.springframework.beans.factory;
 import org.springframework.lang.Nullable;
 
 /**
+ * 用来包装即将要被暴露的对象，getobject()就是对象本身。
+ *
  * Interface to be implemented by objects used within a {@link BeanFactory} which
- * are themselves factories for individual objects. If a bean implements this
- * interface, it is used as a factory for an object to expose, not directly as a
+ * are themselves factories for individual objects. 【If a bean implements this
+ * interface, it is used as a factory for an object to expose】, not directly as a
  * bean instance that will be exposed itself.
  *
  * <p><b>NB: A bean that implements this interface cannot be used as a normal bean.</b>

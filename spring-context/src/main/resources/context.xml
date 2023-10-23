@@ -14,6 +14,15 @@
            				http://www.springframework.org/schema/aop/spring-aop-3.0.xsd
            				http://www.springframework.org/schema/tx
            				http://www.springframework.org/schema/tx/spring-tx-3.0.xsd">
+
 	<!-- 简单的 Bean 配置，后面详讲 -->
 	<bean id="animal" class="org.springframework.context.aa.TestMain"></bean>
+
+	<bean id="a" class="org.springframework.context.aa.A">
+<!--		<property name="propertyB" ref="b"></property>-->
+	</bean>
+
+	<bean id="b" class="org.springframework.context.aa.B">
+		<property name="propertyA" ref="a"></property>
+	</bean>
 </beans>

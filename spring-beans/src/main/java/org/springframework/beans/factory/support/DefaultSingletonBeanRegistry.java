@@ -173,25 +173,36 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	 * <p>Checks already instantiated singletons and also allows for an early
 	 * reference to a currently created singleton (resolving a circular reference).
 	 * @param beanName the name of the bean to look for
-	 * @param allowEarlyReference whether early references should be created or not
+	 * @param allowEarlyReference whether early references 【should be created】 or not
 	 * @return the registered singleton object, or {@code null} if none found
 	 */
 	@Nullable
 	protected Object getSingleton(String beanName, boolean allowEarlyReference) {
+		//1.先直接从单例map中获取，即从一级缓存中取。
+		//可以避免因加锁带来的性能消耗
 		// Quick check for existing instance without full singleton lock
 		Object singletonObject = this.singletonObjects.get(beanName);
 		if (singletonObject == null && isSingletonCurrentlyInCreation(beanName)) {
+			//2.如果bean没有在一级缓存中，并且正在创建的阶段，则从二级缓存中拿
+			//如果不在创建的阶段，说明不会有缓存的存在。
+			//如果已经创建完成了，那么会在上一行代码中拿到singletonObject了
+			//----反正不管怎么样，这里都是线程不安全的，只是作提前判断罢了，避免随意加锁带来性能消耗------
+			//创建完成后，一级缓存会被清理吗 ？ ans:不会的。
 			singletonObject = this.earlySingletonObjects.get(beanName);
 			if (singletonObject == null && allowEarlyReference) {
+				//允许暴露早引用
 				synchronized (this.singletonObjects) {
+					//3.多线程下，加锁，进行双重检测
 					// Consistent creation of early reference within full singleton lock
 					singletonObject = this.singletonObjects.get(beanName);
 					if (singletonObject == null) {
 						singletonObject = this.earlySingletonObjects.get(beanName);
 						if (singletonObject == null) {
+							//工厂有（三级缓存），则从三级缓存中创建出来，然后丢到二级缓存
 							ObjectFactory<?> singletonFactory = this.singletonFactories.get(beanName);
 							if (singletonFactory != null) {
 								singletonObject = singletonFactory.getObject();
+								//加入二级缓存，清理三级缓存
 								this.earlySingletonObjects.put(beanName, singletonObject);
 								this.singletonFactories.remove(beanName);
 							}
@@ -231,12 +242,16 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 					this.suppressedExceptions = new LinkedHashSet<>();
 				}
 				try {
+					//第一次，全新地createBean (sigletonFactory方法会调用createBean方法)
 					singletonObject = singletonFactory.getObject();
 					newSingleton = true;
 				}
 				catch (IllegalStateException ex) {
+
 					// Has the singleton object implicitly appeared in the meantime ->
 					// if yes, proceed with it since the exception indicates that state.
+					//不是已经回锁了吗？为什么为什么抛异常。留意一下上面的getObject中，哪里抛这个异常了
+					//即使加锁了，在有循环依赖的时候，会当前线程会递归调用。create A -> create B -> create A抛异常，然后从缓存中获取
 					singletonObject = this.singletonObjects.get(beanName);
 					if (singletonObject == null) {
 						throw ex;
@@ -256,6 +271,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 					}
 					afterSingletonCreation(beanName);
 				}
+				//如果是新,会清空二级和三级缓存，并加入到一级缓存中去
 				if (newSingleton) {
 					addSingleton(beanName, singletonObject);
 				}
